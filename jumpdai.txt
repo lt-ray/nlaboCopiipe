@@ -1,0 +1,21 @@
+local jumpPart = script.Parent
+local config = jumpPart:FindFirstChildWhichIsA("Configuration", true) -- Configurationを探して取得
+local jumpHeightValue = config:FindFirstChild("JumpHeightValue").Value -- JumpHeightValueを探して取得
+
+-- プレイヤーが踏むと大きくジャンプする
+jumpPart.Touched:Connect(function(hit)
+	-- プレイヤーかどうかを確認
+	local character = hit.Parent
+	local humanoid = character:FindFirstChild("Humanoid")
+	if humanoid then
+		-- 一時的にジャンプ高さを増やす
+		humanoid.JumpHeight = jumpHeightValue
+		humanoid.Jump = true
+
+		-- ジャンプ後に元に戻す
+		task.delay(0.2, function()
+			-- ジャンプする高さをデフォルト値に戻す
+			humanoid.JumpHeight = 7.2
+		end)
+	end
+end)
