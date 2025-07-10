@@ -1,0 +1,9 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ballTemplate = ReplicatedStorage:WaitForChild("BallTemplate")
+
+while true do
+	local newBall = ballTemplate:Clone()
+	newBall.Position = Vector3.new(0, 10, 0)  -- 出現位置を調整
+	newBall.Parent = workspace
+	wait(1)  -- 1秒ごとにボールを生成（必要なら調整可能）
+end
