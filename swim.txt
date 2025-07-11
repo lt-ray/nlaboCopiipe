@@ -1,19 +1,20 @@
 local player = game.Players.LocalPlayer
 local userInputService = game:GetService("UserInputService")
 
-local runSpeed = 40       -- Shiftキーで走る速度（地上）
-local walkSpeed = 16      -- 通常歩行速度
-local swimSpeed = 30      -- Shiftキーで泳ぐ速度
-local swimWalkSpeed = 15  -- 通常の泳ぎ速度
+local runSpeed = 40
+local walkSpeed = 16
+local swimSpeed = 30
+local swimWalkSpeed = 15
 
--- プレイヤーがスポーンしたとき
+local normalJumpPower = 50
+local boostedJumpPower = 80
+
 player.CharacterAdded:Connect(function(character)
 	local humanoid = character:WaitForChild("Humanoid")
 
-	-- 初期歩行速度設定（泳ぎ中にキャラ追加されたとき用）
 	humanoid.WalkSpeed = walkSpeed
+	humanoid.JumpPower = normalJumpPower
 
-	-- 入力開始
 	userInputService.InputBegan:Connect(function(input, gameProcessed)
 		if input.KeyCode == Enum.KeyCode.LeftShift and not gameProcessed then
 			local state = humanoid:GetState()
@@ -22,10 +23,10 @@ player.CharacterAdded:Connect(function(character)
 			else
 				humanoid.WalkSpeed = runSpeed
 			end
+			humanoid.JumpPower = boostedJumpPower
 		end
 	end)
 
-	-- 入力終了
 	userInputService.InputEnded:Connect(function(input, gameProcessed)
 		if input.KeyCode == Enum.KeyCode.LeftShift and not gameProcessed then
 			local state = humanoid:GetState()
@@ -34,22 +35,26 @@ player.CharacterAdded:Connect(function(character)
 			else
 				humanoid.WalkSpeed = walkSpeed
 			end
+			humanoid.JumpPower = normalJumpPower
 		end
 	end)
 
-	-- 状態が変わったときに対応（泳ぎ状態になったとき）
 	humanoid.StateChanged:Connect(function(_, newState)
 		if newState == Enum.HumanoidStateType.Swimming then
 			if userInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
 				humanoid.WalkSpeed = swimSpeed
+				humanoid.JumpPower = boostedJumpPower
 			else
 				humanoid.WalkSpeed = swimWalkSpeed
+				humanoid.JumpPower = normalJumpPower
 			end
 		elseif newState == Enum.HumanoidStateType.Running or newState == Enum.HumanoidStateType.Walking then
 			if userInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
 				humanoid.WalkSpeed = runSpeed
+				humanoid.JumpPower = boostedJumpPower
 			else
 				humanoid.WalkSpeed = walkSpeed
+				humanoid.JumpPower = normalJumpPower
 			end
 		end
 	end)
