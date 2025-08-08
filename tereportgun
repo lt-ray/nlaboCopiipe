@@ -1,0 +1,35 @@
+local tool = script.Parent
+local player = game.Players.LocalPlayer
+
+tool.Activated:Connect(function()
+    local character = player.Character
+    if not character then return end
+
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    -- 球の作成
+    local projectile = Instance.new("Part")
+    projectile.Shape = Enum.PartType.Ball
+    projectile.Size = Vector3.new(1,1,1)
+    projectile.Position = head.Position + head.CFrame.LookVector * 2
+    projectile.Anchored = false
+    projectile.CanCollide = false
+    projectile.Name = "TeleportBall"
+    projectile.Parent = workspace
+
+    -- 発射の勢い
+    local velocity = Instance.new("BodyVelocity")
+    velocity.Velocity = head.CFrame.LookVector * 100
+    velocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    velocity.Parent = projectile
+
+    -- 発射者の情報を保持
+    local creator = Instance.new("ObjectValue")
+    creator.Name = "Creator"
+    creator.Value = player
+    creator.Parent = projectile
+
+    -- 自動削除
+    game.Debris:AddItem(projectile, 5)
+end)
