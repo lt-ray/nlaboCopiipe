@@ -1,5 +1,7 @@
 local tool = script.Parent
 local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local remote = tool:WaitForChild("TeleportEvent")
 
 tool.Activated:Connect(function()
     local character = player.Character
@@ -8,19 +10,24 @@ tool.Activated:Connect(function()
     local head = character:FindFirstChild("Head")
     if not head then return end
 
+    -- マウスの方向を取得
+    local direction = (mouse.Hit.Position - head.Position).Unit
+
     -- 球の作成
     local projectile = Instance.new("Part")
     projectile.Shape = Enum.PartType.Ball
     projectile.Size = Vector3.new(1,1,1)
-    projectile.Position = head.Position + head.CFrame.LookVector * 2
+    projectile.Position = head.Position + direction * 2
     projectile.Anchored = false
     projectile.CanCollide = false
     projectile.Name = "TeleportBall"
+    projectile.BrickColor = BrickColor.new("Bright blue")
+    projectile.Material = Enum.Material.Neon
     projectile.Parent = workspace
 
     -- 発射の勢い
     local velocity = Instance.new("BodyVelocity")
-    velocity.Velocity = head.CFrame.LookVector * 100
+    velocity.Velocity = direction * 100
     velocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
     velocity.Parent = projectile
 
@@ -32,4 +39,11 @@ tool.Activated:Connect(function()
 
     -- 自動削除
     game.Debris:AddItem(projectile, 5)
+
+    -- 着弾判定
+    projectile.Touched:Connect(function(hit)
+        if hit:IsDescendantOf(character) then return end -- 自分自身との接触は無視
+        remote:FireServer(projectile.Position)
+        projectile:Destroy()
+    end)
 end)

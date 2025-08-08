@@ -1,24 +1,11 @@
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "TeleportBall" and child:IsA("Part") then
-        child.Touched:Connect(function(hit)
-            local hitPlayer = game.Players:GetPlayerFromCharacter(hit.Parent)
-            local creatorValue = child:FindFirstChild("Creator")
+local remote = game:GetService("StarterPack"):WaitForChild("TeleportTool"):WaitForChild("TeleportEvent")
 
-            if hitPlayer and creatorValue and creatorValue.Value then
-                local creatorPlayer = creatorValue.Value
-                local creatorChar = creatorPlayer.Character
-                local targetChar = hitPlayer.Character
+remote.OnServerEvent:Connect(function(player, targetPosition)
+    local character = player.Character
+    if not character then return end
 
-                if creatorChar and targetChar then
-                    local creatorRoot = creatorChar:FindFirstChild("HumanoidRootPart")
-                    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-
-                    if creatorRoot and targetRoot then
-                        targetRoot.CFrame = creatorRoot.CFrame
-                    end
-                end
-                child:Destroy()
-            end
-        end)
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        humanoidRootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0)) -- 少し上にワープ
     end
 end)
