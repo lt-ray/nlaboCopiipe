@@ -1,0 +1,127 @@
+-- Tool/Script (Server)
+local tool = script.Parent
+local throwEvent = tool:WaitForChild("ThrowEvent")
+
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+
+-- 調整パラメータ
+local BALL_SPEED = 150         -- 速さ
+local BALL_RADIUS = 0.6        -- 見た目半径
+local MAX_DISTANCE = 600       -- 最大飛距離（直線）
+local LIFETIME = 5             -- 保険の寿命（秒）
+local HIT_COOLDOWN = 0.15      -- 連続ヒット抑制
+
+-- RaycastのためのRaycastParams（投げ主のキャラは無視）
+local function rayParamsForChar(ignoreModel)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {ignoreModel}
+	params.IgnoreWater = true
+	return params
+end
+
+local function findCharacterFromPart(part)
+	if not part then return nil end
+	local m = part:FindFirstAncestorOfClass("Model")
+	if m and m:FindFirstChildOfClass("Humanoid") then return m end
+	return nil
+end
+
+local function teleportToThrower(targetChar, throwerChar)
+	if not (targetChar and throwerChar) then return end
+	local tHRP = targetChar:FindFirstChild("HumanoidRootPart")
+	local oHRP = throwerChar:FindFirstChild("HumanoidRootPart")
+	if not (tHRP and oHRP) then return end
+	-- 重なり回避オフセット
+	tHRP.CFrame = oHRP.CFrame * CFrame.new(0, 0, -3)
+end
+
+-- 見た目用の球（物理は使わない）
+local function spawnBallVisual(pos)
+	local p = Instance.new("Part")
+	p.Shape = Enum.PartType.Ball
+	p.Size = Vector3.new(BALL_RADIUS, BALL_RADIUS, BALL_RADIUS)
+	p.Material = Enum.Material.Neon
+	p.Color = Color3.fromRGB(255, 200, 50)
+	p.Anchored = true
+	p.CanCollide = false
+	p.Name = "WarpBallVisual"
+	p.CFrame = CFrame.new(pos)
+	p.Parent = workspace
+	return p
+end
+
+local function straightProjectile(origin, dir, throwerPlayer)
+	local char = throwerPlayer.Character
+	if not char then return end
+
+	local visual = spawnBallVisual(origin)
+	if not visual then return end
+
+	local alive = true
+	local traveled = 0
+	local lastPos = origin
+	local lastTouch = 0
+	local params = rayParamsForChar(char)
+
+	-- 自壊タイマ（保険）
+	task.delay(LIFETIME, function()
+		if alive then
+			alive = false
+			if visual and visual.Parent then visual:Destroy() end
+		end
+	end)
+
+	-- メインループ（直線移動）
+	local conn
+	conn = RunService.Heartbeat:Connect(function(dt)
+		if not alive then conn:Disconnect() return end
+
+		local step = math.max(0.0001, dt)
+		local delta = dir * BALL_SPEED * step
+		local nextPos = lastPos + delta
+
+		-- Raycastでヒット検出
+		local result = workspace:Raycast(lastPos, nextPos - lastPos, params)
+		if result then
+			-- 命中演出（任意）
+			if visual then
+				visual.CFrame = CFrame.new(result.Position)
+			end
+
+			-- ヒット対象がHumanoidか判定
+			local hitChar = findCharacterFromPart(result.Instance)
+			if hitChar and os.clock() - lastTouch > HIT_COOLDOWN then
+				lastTouch = os.clock()
+				teleportToThrower(hitChar, char)
+			end
+
+			-- 弾終了
+			alive = false
+			if visual and visual.Parent then visual:Destroy() end
+			conn:Disconnect()
+			return
+		end
+
+		-- ヒットなし：見た目を進める
+		traveled += delta.Magnitude
+		if visual then visual.CFrame = CFrame.new(nextPos) end
+		lastPos = nextPos
+
+		-- 射程超えたら終了
+		if traveled >= MAX_DISTANCE then
+			alive = false
+			if visual and visual.Parent then visual:Destroy() end
+			conn:Disconnect()
+			return
+		end
+	end)
+end
+
+throwEvent.OnServerEvent:Connect(function(player, origin, dir)
+	if typeof(origin) ~= "Vector3" or typeof(dir) ~= "Vector3" then return end
+	-- dirは必ず正規化しておく
+	if dir.Magnitude < 0.99 then dir = dir.Unit end
+	straightProjectile(origin, dir.Unit, player)
+end)

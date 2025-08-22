@@ -1,0 +1,33 @@
+local tool = script.Parent
+local players = game:GetService("Players")
+local player = players.LocalPlayer
+local uis = game:GetService("UserInputService")
+local throwEvent = tool:WaitForChild("ThrowEvent")
+
+local COOLDOWN = 0.35
+local lastFire = 0
+
+tool.Activated:Connect(function()
+	if os.clock() - lastFire < COOLDOWN then return end
+	lastFire = os.clock()
+
+	local char = player.Character
+	if not char then return end
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	-- マウスがあればマウス位置へ、なければ前方へ
+	local mouse = player:GetMouse()
+	local targetPos = mouse and mouse.Hit and mouse.Hit.Position
+	local fromPos = hrp.Position + (hrp.CFrame.LookVector * 1.5) + Vector3.new(0, 1.5, 0)
+
+	local dir
+	if targetPos then
+		dir = (targetPos - fromPos)
+	else
+		dir = hrp.CFrame.LookVector
+	end
+
+	-- 正規化方向と発射位置をサーバーへ
+	throwEvent:FireServer(fromPos, dir.Unit)
+end)
